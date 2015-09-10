@@ -1,0 +1,32 @@
+#include <iostream>
+#include "../hashtablemap.hpp"
+
+using namespace std;
+
+void print_map(const hashtablemap<string, int>& m) {
+  cout << "in the map: " << endl;
+  for (hashtablemap<string, int>::const_iterator it=m.begin(); it!=m.end(); ++it) {
+    cout << it->first << " " << it->second << endl;
+  }
+  cout << endl;
+}
+
+int main() {
+  hashtablemap<string, int> m;
+  cout << m.size() << " " << m.empty() << endl;
+  pair<hashtablemap<string, int>::iterator, bool> p;
+  hashtablemap<string, int>::iterator it;
+  p = m.insert(pair<string, int>("a", 1));
+  cout << "inserted a: " << p.first->second << endl;
+  print_map(m);
+  m.insert(pair<string, int>("b", 2));
+  print_map(m);
+  cout << m.size() << " " << m.empty() << endl;
+  m.erase("a");
+  cout << m["b"] << endl;
+  m["bb"] = 10;
+  print_map(m);
+  cout << m.size() << " " << m.empty() << endl;
+  return 0;
+}
+

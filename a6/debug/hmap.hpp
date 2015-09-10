@@ -1,0 +1,415 @@
+#include <iostream>
+#include <vector>
+#include <list>
+#include <utility>
+
+using namespace std;
+
+template <class Key, class T>
+class hashtablemap
+{
+  typedef hashtablemap<Key, T>     Self;
+
+public:
+  typedef Key                key_type;
+  typedef T                  data_type;
+  typedef T                  mapped_type;
+  typedef pair<const Key, T> value_type;
+  typedef unsigned int       size_type;
+  typedef int                difference_type;
+
+private:
+  struct hash_node {
+    hash_node(const pair<const Key,T>& x, size_type v) : value_m(x),
+							 hash_value(v),
+							 next_m(NULL) {}
+   
+    size_type hash_value;
+    value_type value_m;
+    hash_node* next_m;
+  };
+
+public:
+  class iterator {
+    typedef std::input_iterator_tag iterator_category;
+    typedef value_type* pointer;
+    typedef value_type& reference;
+    
+    friend class hashtablemap;
+  public:
+    
+    iterator(hashtablemap* map, hash_node* node) : map_m(map), node_m(node) {}
+    iterator(const iterator& x) : map_m(x.map_m), node_m(x.node_m) {}
+
+    iterator& operator=(const iterator& x) {
+      map_m = x.map_m;
+      node_m = x.node_m;
+      return *this;
+    }
+
+    bool operator==(const iterator& x) {
+      return node_m == x.node_m;
+    }
+
+    bool operator!=(const iterator& x) {
+      return node_m != x.node_m;
+    }
+
+    reference operator*() {
+      if (node_m == NULL) {
+	pair<const Key,T> m = make_pair(Key(),T());
+	node_m = new hash_node(m,0);
+      }
+      return node_m -> value_m;
+    }
+
+    pointer operator->() {
+      if (node_m == NULL) {
+	pair<const Key,T> m = make_pair(Key(),T());
+	node_m = new hash_node(m,0);
+      }
+      return &(node_m -> value_m);
+    }
+
+    iterator operator++() {
+      node_m = map_m -> _next_node(node_m,node_m->hash_value);
+      return *this;
+    }
+
+    iterator operator++(int) {
+      iterator ret(*this);
+      node_m = map_m -> _next_node(node_m,node_m->hash_value);
+      return *ret;
+    }
+
+  private:
+    hashtablemap* map_m;
+    hash_node* node_m;
+    
+  };
+  class const_iterator {
+    typedef std::input_iterator_tag iterator_category;
+    typedef const pair<const Key, T> value_type;
+    typedef value_type* pointer;
+    typedef value_type& reference;
+    
+    friend class iterator;
+    friend class bstmap;
+  
+  public:
+    const_iterator(hashtablemap* map, hash_node* node) : map_m(map),node_m(node) {}
+    const_iterator(const const_iterator& x) : map_m(x.map_m), node_m(x.node_m) {}
+    const_iterator(const iterator& x) : map_m(x.map_m), node_m(x.node_m) {}
+
+    iterator& operator=(const iterator& x) {
+      map_m = x.map_m;
+      node_m = x.node_m;
+      return *this;
+    }
+
+    bool operator==(const iterator& x) {
+      return node_m == x.node_m;
+    }
+
+    bool operator!=(const iterator& x) {
+      return node_m != x.node_m;
+    }
+
+    reference operator*() {
+      if (node_m == NULL) {
+	pair<const Key, T> m = make_pair(Key(),T());
+	node_m = new hash_node(m,0);
+      }
+      return node_m -> value_m;
+    }
+
+    pointer operator->() {
+      if (node_m == NULL) {
+	pair<const Key,T> m = make_pair(Key(),T());
+	node_m = new hash_node(m,0);
+      }
+      return &(node_m -> value_m);
+    }
+
+    iterator operator++() {
+      node_m = map_m -> _next_node(node_m,node_m->hash_value);
+      return *this;
+    }
+
+    iterator operator++(int) {
+      iterator ret(*this);
+      node_m = map_m -> _next_node(node_m,node_m->hash_value);
+      return *ret;
+    }
+    
+  private:
+    hashtablemap* map_m;
+    hash_node* node_m;
+  };
+
+public:
+  // default constructor to create an empty map
+  hashtablemap() {
+    hash_table = new hash_node* [1117]();
+    size_m = 0;
+  }
+
+  // overload copy constructor to do a deep copy
+  hashtablemap(const Self& x) {
+    hash_node** dummy_table = x.hash_table;
+    hash_table = new hash_node* [1117]();
+    for (int i=0; i<1117; ++i) {
+      if (dummy_table[i] != NULL) {
+	hash_node* entry = dummy_table[i];
+	hash_node* prev = new hash_node(entry->value_m,i);
+	hash_table[i] = prev;
+	cout << i << " " << i << endl;
+       	entry = entry -> next_m;
+	while (entry != NULL) {
+	  hash_node* my_node = new hash_node(entry->value_m,i);
+	  prev -> next_m = my_node;
+	  prev = my_node;
+	  entry = entry -> next_m;
+	}
+	
+      }
+    }
+    size_m = x.size_m;
+  }
+
+  // overload assignment to do a deep copy
+  Self& operator=(const Self& x) {
+    clear();
+    hash_node** dummy_table = x.hash_table;
+    hash_table = new hash_node* [1117];
+    for (int i=0; i<1117; ++i) {
+      if (dummy_table[i] != NULL) {
+	hash_node* entry = dummy_table[i];
+	hash_node* prev = new hash_node(entry->value_m,i);
+	hash_table[i] = prev;
+       	entry = entry -> next_m;
+	
+	while (entry != NULL) {
+	  hash_node* my_node = new hash_node(entry->value_m,i);
+	  prev -> next_m = my_node;
+	  prev = my_node;
+	  entry = entry -> next_m;
+	}
+	
+      }
+    }
+    size_m = x.size_m;
+  }
+
+
+  // accessors:
+  iterator begin() {
+    hash_node* result = NULL;
+    for (size_type i=0; i<1117; ++i) {
+      if (hash_table[i] != NULL) {
+	result = hash_table[i];
+	return iterator(this,result);
+      }
+      /*
+      result = hash_table[i];
+      if (result != NULL) {
+	cout << i << endl;
+	cout << result -> value_m.first << endl;
+	return iterator(this,result);
+      }
+      */
+    }
+    return iterator(this,result);
+  }
+  
+  const_iterator begin() const {}
+  
+  iterator end() {
+    return iterator(this,NULL);
+  }
+  
+  const_iterator end() const {}
+  
+  bool empty() const {
+    if (size_m == 0) return true;
+    return false;
+  }
+  
+  size_type size() const {
+    return size_m;
+  }
+
+  // insert/erase
+  pair<iterator,bool> insert(const value_type& x) {
+    size_type h_val = _hash(x.first);
+    pair<hash_node*,bool> m = _find(x.first);
+    if (m.second) {
+      // fail to insert
+      cerr << "hahahah " << endl;
+      return make_pair(iterator(this,m.first),false);
+    } else {
+      hash_node* new_node = new hash_node(x,h_val);
+      hash_node* prev = m.first;
+      if (prev == NULL) {
+	hash_table[h_val] = new_node;
+	size_m += 1;
+	return make_pair(iterator(this,new_node),true);
+      }
+      prev -> next_m = new_node;
+      size_m += 1;
+      return make_pair(iterator(this,new_node),true);
+    }
+  }
+  
+  void erase(iterator pos) {
+    hash_node* target_node = pos.node_m;
+    if (target_node == NULL) return;
+    size_type h_val = target_node -> hash_value;
+    hash_node* entry = hash_table[h_val];
+    if (target_node == entry) {
+      hash_table[h_val] = NULL;
+      size_m -= 1;
+      delete target_node;
+      return;
+    }
+    hash_node* prev = entry;
+    while (entry != NULL) {
+      if (entry == target_node) {
+	hash_node* next = target_node -> next_m;
+	prev -> next_m = next;
+	size_m -= 1;
+	delete target_node;
+      }
+      prev = entry;
+    }
+    return;
+  }
+  
+  size_type erase(const Key& x) {
+    pair<hash_node*,bool> m = _find(x);
+    if (m.second) {
+      hash_node* target_node = m.first;
+      iterator it(this,target_node);
+      this->erase(it);
+      return 1;
+    } else {
+      return 0;
+    }
+  }
+  
+  void clear() {
+    for (int i=0; i<1117; ++i) {
+      if (hash_table[i] != NULL) {
+	hash_node* entry = hash_table[i];
+	if (entry -> next_m == NULL) {
+	  hash_table[i] = NULL;
+	  size_m -= 1;
+	  delete entry;
+	} else {
+	  while (entry != NULL) {
+	    hash_node* prev = entry;
+	    entry = entry -> next_m;
+	    size_m -= 1;
+	    delete prev;
+	  }
+	  hash_table[i] = NULL;
+	}
+      }
+    }
+  }
+
+  // map operations:
+  iterator find(const Key& x) {
+    pair<hash_node*,bool> m = _find(x);
+    if (m.second) {
+      return iterator(this,m.first);
+    } else {
+      return iterator(this,NULL);
+    }
+  }
+  
+  const_iterator find(const Key& x) const {}
+  
+  size_type count(const Key& x) const {
+    pair<hash_node*,bool> m = _find(x);
+    if (m.second) return 1;
+    else return 0;
+  }
+  
+  T& operator[](const Key& k) {
+    pair<hash_node*,bool> m = _find(k);
+    if (m.second) {
+      return (m.first -> value_m).second;
+    } else {
+      this -> insert(make_pair(k,T()));
+      pair<hash_node*,bool> n = _find(k);
+      return (n.first -> value_m).second;
+    }
+  }
+
+private:
+
+  pair<hash_node*,bool> _find(const Key& x) const {
+    size_type hash_value = _hash(x);
+    hash_node* entry = hash_table[hash_value];
+    hash_node* image = entry;
+    pair<hash_node*,bool> result = make_pair(image,false);
+    
+    while (entry != NULL) {
+      image = entry;
+      if (entry -> value_m.first == x) {
+	result.first = entry;
+	result.second = true;
+	return result;
+      }
+      entry = entry -> next_m;
+    }
+    result.first = image;
+    return result;
+  }
+
+  hash_node* _next_node(hash_node* ele,size_type h_val) const {
+    hash_node* result = NULL;
+    if (ele == NULL) return NULL;
+    
+    if (ele -> next_m != NULL) {
+      return ele->next_m;
+    } else {
+      for (size_type i = h_val+1; i < 1117; ++i) {
+	hash_node* node = hash_table[i];
+	if (node != NULL) return node;
+      }
+      return NULL;
+    }
+  }
+
+  hash_node **hash_table;
+  size_type size_m;
+
+  // a series of hash function
+  size_type _hash(int i) const {
+    const int prime = 1117;
+    return i % 1117;
+  }
+  size_type _hash(const string& s) const {
+    const int prime = 1117;
+    char char_array[s.size()+1];
+    strcpy(char_array,s.c_str());
+    int result = 0;
+    int r = 128;
+    for (int i=0; i<s.size(); ++i) {
+      int p = char_array[i]+0;
+      for (int j=0; j<=i; ++j) {
+	p = (p*r)%prime;
+      }
+      result = (result+p)%prime;
+    }
+    cout << s << ": " << result << endl;
+    return result;
+  }
+
+  /*****************************************************************/
+
+
+
+};

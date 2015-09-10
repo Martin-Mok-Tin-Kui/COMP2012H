@@ -1,0 +1,325 @@
+/**
+ * a simple binary search tree.
+ * no implementation of balancing.
+ */
+template <class Key, class T>
+class bstmap
+{
+  typedef bstmap<Key, T>     Self;
+
+public:
+  typedef Key                key_type;
+  typedef T                  data_type;
+  typedef T                  mapped_type;
+  typedef pair<const Key, T> value_type;
+  typedef unsigned int       size_type;
+  typedef int                difference_type;
+  
+public:
+  /**
+   * \class Node.
+   * \brief Node of a bstmap. A Node stores a 
+   * key value pair, and has three pointer to
+   * its left and right child and its parent.
+   */
+  class Node {
+  public:
+    Node(value_type my_pair, Node* my_parent, Node* my_left, Node* my_right):
+      value_m(my_pair), parent(my_parent), left_child(my_left), right_child(my_right) {}
+    Node(const Node& x):
+      value_m(x.value_m), parent(x.parent), left_child(x.left_child), right_child(x.right_child) {}
+    ~Node() {}
+
+    value_type value_m;
+    Node* parent;
+    Node* left_child;
+    Node* right_child;
+  }
+
+public:
+  
+  template<typename val_T, typename Base_T>
+  class _iterator {
+    // your iterator definition goes here
+  public:
+    typedef std::input_iterator_tag iterator_category;
+    typedef val_T value_type;
+    typedef difference_type difference_type;
+    typedef value_type* pointer;
+    typedef value_type& reference;
+
+    friend class bstmap;
+    
+    // it's standard idiom to contain the map in iterator class.
+    // though in this case, we don't actually need it.
+    _iterator(Base_T* map, Node* node=NULL): map_m(map), node_m(node) {}
+    _iterator(const _iterator& x): map_m(x.map_m), node_m(x.node_m) {}
+    
+    _iterator& operator=(const _iterator& x) {
+      // simple memberwise assignment.
+      map_m = x.map_m;
+      node_m = x.node_m;
+      return *this;
+    }
+    
+    bool operator==(const _iterator& x) const {
+      return (x.node_m == node_m);
+    }
+
+    bool operator!=(const _iterator& x) const {
+      return (node_m != x.node_m);
+    }
+
+    reference operator*() {
+      return node_m->value_m;
+    }
+    
+    pointer operator->() {
+      return &(node_m->value_m);
+    }
+
+    _iterator& operator++() {
+      node_m = map_m->_successor(node_m);
+      return *this;
+    }
+
+    // post ++, use sort of hack method,
+    // pass a dummy int argument.
+    _iterator& operator++(int) {
+      _iterator ret(*this);
+      node_m = map_m->_successor(node_m);
+      return ret;
+    }
+
+  private:
+    Base_T* map_m;
+    Node* node_m;
+  };
+  
+  // explicit instantiation of _iterator class.
+  // template class _iterator<value_type, bstmap>;
+  // template class _iterator<const value_type, const bstmap>;
+
+  // typedef of iterator and const_iterator.
+  typedef _iterator<value_type, bstmap> iterator;
+  typedef _iterator<const value_type, const bstmap> const_iterator;
+
+public:
+  // default constructor to create an empty map
+  bstmap(): root_m(NULL), size_m(0) {}
+
+  // overload copy constructor to do a deep copy
+  bstmap(const Self& x) {
+    size_m = x.size_m;
+    // copy all nodes. keep the original structure.
+    root_m = x.root_m;
+    for (iterator it = begin(); it ! = end(); ++it) {
+      
+    }
+  }
+
+  // overload assignment to do a deep copy
+  Self& operator=(const Self& x) {
+    // self assignment protection.
+    if (this != &x) {
+      clear();
+      size_m = x.size_m;
+      // copy all nodes of x.
+      
+    }
+    return *this;
+  }
+
+
+
+  // accessors:
+  iterator begin() {
+    return iterator(this, _left_most_child());
+  }
+  const_iterator begin() const {
+    return const_iterator(this, _left_most_child());
+  }
+  iterator end() {
+    return iterator(this, NULL);
+  }
+  const_iterator end() const {
+    return const_iterator(this, NULL);
+  }
+  bool empty() const {
+    return size_m == 0;
+  }
+  size_type size() const {
+    return size_m;
+  }
+
+
+
+  // insert/erase
+  pair<iterator,bool> insert(const value_type& x) {
+    pair<Node*, bool> indicator = _find(x.first);
+    pair<iterator, bool> ret(iterator(this, NULL), false);
+    // if the key already exist
+    if (indicator.second) {
+      return ret;
+    }
+    // the key's not found, can insert.
+    else {
+      ++ size_m;
+      if (indicator.first == NULL) {
+	// first time insert to an empty tree.
+	root_m = new Node(x, NULL, NULL, NULL);
+	ret.first = iterator(this, root_m);
+	ret.second = true;
+	return ret;
+      }
+      else {
+	if (x.first > ((indicator.first)->value_m).first) {
+	  (indicator.first)->right_child = new Node(x, indicator.first, NULL, NULL);
+	  ret.first = iterator(this, indicator.first);
+	  ret.second = true;
+	  return ret;
+	}
+	else {
+	  (indicator.first)->left_child = new Node(x, indicator.first, NULL, NULL);
+	  ret.first = iterator(this, indicator.first);
+	  ret.second = true;
+	  return ret;
+	}
+      }
+    }
+  }
+  
+  void erase(iterator pos) {}
+  size_type erase(const Key& x) {}
+  
+  void clear() {
+    _recursively_delete_nodes(root_m);
+    root_m = NULL;
+  }
+
+  // map operations:
+  iterator find(const Key& x) {
+    pair<Node*, bool> ret = _find(x);
+    if (ret.second) {
+      return iterator(this, ret.first);
+    }
+    else {
+      // return iterator end.
+      return iterator(this, NULL);
+    }
+  }
+
+  const_iterator find(const Key& x) const {
+    pair<Node*, bool> ret = _find(x);
+    if (ret.second) {
+      return const_iterator(this, ret.first);
+    }
+    else {
+      // return iterator end.
+      return const_iterator(this, NULL);
+    }
+  }
+
+  size_type count(const Key& x) const {
+    if (find(x) != end()) {
+      return 1;
+    }
+    else {
+      return 0;
+    }
+  }
+
+  T& operator[](const Key& k) {
+    // find the key.
+    iterator it = find(x);
+    // if key's found, return it. 
+    // otherwise, insert it.
+    return x->second;
+  }
+
+private:
+  /**
+   * \brief helper function _find, try to find the
+   * node with key x.
+   * \return a pair of the node with key x and bool
+   * value true indicating successful finding, if 
+   * the key is found. else return pair<NULL, false>
+   */
+  pair<Node*, bool> _find(const Key& x) const {
+    pair<Node*, bool> ret(NULL, false);
+    Node* curr_parent = NULL;
+    Node* curr = root_m;
+    while (curr != NULL) {
+      curr_parent = curr;
+      if (x == (curr->value_m).first) {
+	// return ret with the current node.
+	ret.first = curr;
+	ret.second = true;
+	return ret;
+      }
+      else if (x < (curr->value_m).first) {
+	// if x is less than curr key, go to its left child.
+	curr = curr->left_child;
+      }
+      else if (x > (curr->value_m).first) {
+	// else go to the right child.
+	curr = curr->right_child;
+      }
+    }
+    // return ret indicates key not found.
+    ret.first = curr_parent;
+    return ret;
+  }
+
+  /**
+   * \brief find the successor of node ele.
+   * \return the successor node of ele, if 
+   * ele has no successor, return NULL.
+   */
+`  Node* _successor(Node* ele) const {
+    // if ele has a right subtree, then
+    // the successor is the left most element
+    // of the subtree.
+    if (ele->right_child != NULL) {
+      Node* curr = ele->right_child;
+      Node* ret;
+      while (curr != NULL) {
+	ret = curr;
+	curr = curr->left_child;
+      }
+      return ret;
+    }
+    // else keep moving up until finding
+    // a parent which branches from the left.
+    else {
+      Node* ret = ele->parent;
+      Node* curr = ele;
+      while ((ret != NULL) && (ret->left_child != curr)) {
+	curr = ret;
+	ret = ret->parent;
+      }
+      return ret;
+    }
+  }
+
+  Node* _left_most_child() {
+    Node* ret = NULL;
+    Node* curr = root_m;
+    while (curr != NULL) {
+      ret = curr;
+      curr = curr->left;
+    }
+    return ret;
+  }
+
+  void _recursively_delete_nodes(Node* x) {
+    if (x != NULL) {
+      _recursively_delete_nodes(x->left_child);
+      _recursively_delete_nodes(x->right_child);
+      delete x;
+    }
+  }
+  
+  Node* root_m;
+  size_type size_m;
+};
